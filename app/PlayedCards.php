@@ -9,7 +9,7 @@ use function Termwind\render;
 class PlayedCards
 {
     /**
-     * @var Collection<string, Collection<int, Card>>
+     * @var Collection<string, Collection<int, Card>> $cards
      */
     public Collection $cards;
 

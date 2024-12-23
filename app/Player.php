@@ -8,7 +8,7 @@ use function Termwind\render;
 final class Player
 {
     /**
-     * @var Collection<int, Card>
+     * @var Collection<int, Card> $cards
      */
     public Collection $cards;
 
