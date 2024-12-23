@@ -2,11 +2,10 @@
 
 namespace App\Commands;
 
-use App\Board;
+use App\GameSession;
 use App\Player;
 use Illuminate\Support\Collection;
 use LaravelZero\Framework\Commands\Command;
-use function Termwind\render;
 
 class PlayCommand extends Command
 {
@@ -14,7 +13,7 @@ class PlayCommand extends Command
 
     protected $description = 'Play a game of hanabi';
 
-    private Board $board;
+    private GameSession $gameSession;
 
     public function handle(): void
     {
@@ -24,16 +23,15 @@ class PlayCommand extends Command
             $this->info('See u next time :)');
         }
 
-        $this->board = new Board($players);
-        $this->board->distribute();
+        $this->gameSession = new GameSession($players);
 
-        while (!$this->board->finished) {
+        while (!$this->gameSession->isOver) {
             $this->turn();
 
-            $this->board->nextPlayer();
+            $this->gameSession->nextPlayer();
         }
 
-        if ($this->board->isGameLost()) {
+        if ($this->gameSession->isGameLost()) {
             $this->gameLost();
             return;
         }
@@ -43,21 +41,20 @@ class PlayCommand extends Command
 
     protected function turn(): void
     {
-        $currentPlayer = $this->board->getCurrentPlayer();
+        $currentPlayer = $this->gameSession->getCurrentPlayer();
 
-        $this->board->renderOtherPlayersCards();
-        $this->board->discard->render();
-        $this->board->playMat->render();
-        $this->board->cardDeck->renderRemainingCards();
+        $this->gameSession->renderOtherPlayersCards();
+        $this->gameSession->discardPile->render();
+        $this->gameSession->playedCards->render();
+        $this->gameSession->drawPile->renderRemainingCards();
 
         $this->info("Your turn, $currentPlayer->name");
         $currentPlayer->renderCards(!env('SHOW_HIDDEN_CARDS'), false);
 
-
         $this->doAction();
 
-        if ($this->board->lastPlayerToPlay()?->name === $currentPlayer->name) {
-            $this->board->finished = true;
+        if ($this->gameSession->lastPlayerToPlay()?->name === $currentPlayer->name) {
+            $this->gameSession->isOver = true;
         }
     }
 
@@ -76,61 +73,15 @@ class PlayCommand extends Command
         };
     }
 
-    protected function gameLost(): void
-    {
-        $this->info('Game over...');
-        $restart = $this->choice('Want to play another game ?', [
-            'Yes',
-            'No'
-        ]);
-        if ($restart === 'Yes') {
-            $this->handle();
-        }
-    }
-
-    private function getPlayers(): Collection
-    {
-        $players = collect();
-        $playersCount = $this->option('players-count') ?? $this->getPlayersCount();
-
-        if (!$playersCount) {
-            return $players;
-        }
-
-        foreach (range(1, $playersCount) as $playerNumber) {
-            $name = $this->option('default-players-name')
-                ? "Player $playerNumber"
-                : $this->ask("What is the name of the player n° $playerNumber", "Player $playerNumber");
-            $players->push(new Player($name));
-        }
-
-        return $players;
-    }
-
-    private function getPlayersCount(): ?int
-    {
-        return $this->choice('How many players ? ', [
-            2 => '2',
-            3 => '3',
-            4 => '4',
-            5 => '5'
-        ]);
-    }
-
-    private function giveHint()
-    {
-
-    }
-
     private function discard(): void
     {
 
         $cardIndexToDiscard = $this->chooseCard('What card do you want to discard ?');
 
-        $this->board->discard($cardIndexToDiscard);
+        $this->gameSession->discard($cardIndexToDiscard);
 
-        if (($card = $this->board->drawCard())) {
-            $this->board
+        if (($card = $this->gameSession->drawCard())) {
+            $this->gameSession
                 ->getCurrentPlayer()
                 ->giveCard($card, 4);
         }
@@ -142,9 +93,28 @@ class PlayCommand extends Command
 
     }
 
+    private function giveHint()
+    {
+
+    }
+
+    protected function gameLost(): void
+    {
+        $this->info('Game over...');
+
+        $restart = $this->choice('Want to play another game ?', [
+            'Yes',
+            'No'
+        ]);
+
+        if ($restart === 'Yes') {
+            $this->handle();
+        }
+    }
+
     private function chooseCard(string $message): int
     {
-        $player = $this->board->getCurrentPlayer();
+        $player = $this->gameSession->getCurrentPlayer();
         $player->renderCards(true);
 
         $choices = [
@@ -158,5 +128,30 @@ class PlayCommand extends Command
         $choice = $this->choice($message, $choices);
 
         return array_search($choice, $choices);
+    }
+
+    private function getPlayers(): Collection
+    {
+        $playersCount = $this->option('players-count') ?? $this->choice('How many players ? ', [
+            2 => '2',
+            3 => '3',
+            4 => '4',
+            5 => '5'
+        ]);
+
+        if (!$playersCount) {
+            return collect();
+        }
+
+        $players = collect();
+
+        foreach (range(1, $playersCount) as $playerNumber) {
+            $name = $this->option('default-players-name')
+                ? "Player $playerNumber"
+                : $this->ask("What is the name of the player n° $playerNumber", "Player $playerNumber");
+            $players->push(new Player($name));
+        }
+
+        return $players;
     }
 }

@@ -2,31 +2,31 @@
 
 namespace App;
 
+use App\Enums\Color;
 use Illuminate\Support\Collection;
 use function Termwind\render;
 
-class Discard
+class PlayedCards
 {
     /**
-     * @var Collection<int, Card>
+     * @var Collection<string, Collection<int, Card>>
      */
     public Collection $cards;
 
     public function __construct()
     {
         $this->cards = collect();
-    }
 
-    public function pushCard(Card $card): void
-    {
-        $this->cards->push($card);
+        foreach (Color::cases() as $color) {
+            $this->cards->{$color->value} = collect();
+        }
     }
 
     public function render(): void
     {
         render(
-            view('discard', [
-                'cards' => $this->cards
+            view('played-cards', [
+                'cards' => $this->cards,
             ])
         );
     }

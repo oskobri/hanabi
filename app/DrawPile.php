@@ -10,15 +10,15 @@ use App\Enums\Number;
 use Illuminate\Support\Collection;
 use function Termwind\render;
 
-final class CardDeck
+final class DrawPile
 {
     public Collection $cards;
 
     public function __construct()
     {
-        $this->cards = new Collection();
+        $this->cards = collect();
 
-        $this->buildDeck();
+        $this->buildPile();
     }
 
     public function pick(): ?Card
@@ -41,7 +41,7 @@ final class CardDeck
         HTML);
     }
 
-    private function buildDeck(): void
+    private function buildPile(): void
     {
         foreach (Color::cases() as $color) {
             foreach (Number::cases() as $number) {
