@@ -17,7 +17,7 @@ class DiscardPile
         $this->cards = collect();
     }
 
-    public function pushCard(Card $card): void
+    public function add(Card $card): void
     {
         $this->cards->push($card);
     }

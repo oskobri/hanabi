@@ -17,18 +17,13 @@ final class Player
         $this->cards = collect();
     }
 
-    public function giveCard(Card $card, ?int $position = null): void
+    public function giveCard(Card $card): void
     {
-        if($position === null) {
-            $this->cards->push($card);
-        }
-        // Put card at last position
-        else {
-            $this->cards->put($position, $card);
-        }
+        $this->cards = $this->cards->values();
+        $this->cards->push($card);
     }
 
-    public function discard(int $cardIndex): Card
+    public function pull(int $cardIndex): Card
     {
         $card = $this->cards->pull($cardIndex);
         $this->cards = $this->cards->values();

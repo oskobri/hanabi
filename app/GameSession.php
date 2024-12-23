@@ -2,7 +2,9 @@
 
 namespace App;
 
+use App\Enums\Number;
 use Illuminate\Support\Collection;
+use function Termwind\render;
 
 final class GameSession
 {
@@ -58,6 +60,15 @@ final class GameSession
         $this->players->except($this->currentPlayerIndex)->each(fn (Player $player) => $player->renderCards());
     }
 
+    public function addError(): void
+    {
+        $this->errors++;
+
+        if($this->isGameLost()) {
+            $this->isOver = true;
+        }
+    }
+
     public function isGameLost(): bool
     {
         return $this->errors === 3;
@@ -75,7 +86,7 @@ final class GameSession
 
     public function drawCard(): ?Card
     {
-        if($this->drawPile->isEmpty()) {
+        if ($this->drawPile->isEmpty()) {
             return null;
         }
 
@@ -84,30 +95,47 @@ final class GameSession
 
     public function discard(int $cardIndexToDiscard): void
     {
-        if($this->drawPile->isEmpty()) {
+        if ($this->drawPile->isEmpty()) {
             return;
         }
 
-        $card = $this->getCurrentPlayer()->discard($cardIndexToDiscard);
+        $card = $this->getCurrentPlayer()->pull($cardIndexToDiscard);
 
-        $this->discardPile->pushCard($card);
+        $this->discardPile->add($card);
     }
 
-    public function play(int $cardIndexToPlay)
+    public function play(int $cardIndexToPlay): bool
     {
-        $card = $this->getCurrentPlayer()->discard($cardIndexToPlay);
+        $card = $this->getCurrentPlayer()->pull($cardIndexToPlay);
 
-        if($this->cardCanBePlayed($card)) {
-            return;
+        if ($this->cardCanBePlayed($card)) {
+            $this->playedCards->add($card);
+        }
+        else {
+            $this->discardPile->add($card);
+            $this->addError();
+            $error = true;
         }
 
-        $this->discardPile->pushCard($card);
-        $this->errors += 1;
+        $card = $this->drawPile->pick();
+        $this->getCurrentPlayer()->giveCard($card);
+
+        return $error ?? false;
     }
 
-    protected function cardCanBePlayed(Card $card): bool
+    public function renderErrors(): void
     {
-        // Card number is 1 or
+        $classError = $this->errors ? 'text-red' : 'text-green';
+        $errorText =  str('error')->plural($this->errors);
+
+        render(<<<HTML
+            <div class="mb-1 $classError">{$this->errors} {$errorText}</div>
+        HTML);
+    }
+
+    private function cardCanBePlayed(Card $card): bool
+    {
+        return ($card->number->value - 1) === $this->playedCards->countForColor($card->color);
     }
 
     private function distribute(): void

@@ -26,6 +26,10 @@ class PlayCommand extends Command
         $this->gameSession = new GameSession($players);
 
         while (!$this->gameSession->isOver) {
+            $this->info('-------------------------------------------------------');
+            $this->info('--------------------- Next Player ---------------------');
+            $this->info('-------------------------------------------------------');
+
             $this->turn();
 
             $this->gameSession->nextPlayer();
@@ -47,6 +51,7 @@ class PlayCommand extends Command
         $this->gameSession->discardPile->render();
         $this->gameSession->playedCards->render();
         $this->gameSession->drawPile->renderRemainingCards();
+        $this->gameSession->renderErrors();
 
         $this->info("Your turn, $currentPlayer->name");
         $currentPlayer->renderCards(!env('SHOW_HIDDEN_CARDS'), false);
@@ -83,14 +88,17 @@ class PlayCommand extends Command
         if (($card = $this->gameSession->drawCard())) {
             $this->gameSession
                 ->getCurrentPlayer()
-                ->giveCard($card, 4);
+                ->giveCard($card);
         }
     }
 
-    private function play()
+    private function play(): void
     {
         $cardIndexToDiscard = $this->chooseCard('What card do you want to play ?');
 
+        if(!$this->gameSession->play($cardIndexToDiscard)) {
+            $this->warn('Error! You cannot play, this card');
+        }
     }
 
     private function giveHint()
