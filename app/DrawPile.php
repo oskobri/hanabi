@@ -35,7 +35,7 @@ final class DrawPile
     {
         render(<<<HTML
             <div class="mb-1">
-                <h1>Card deck</h1>
+                <h1>Draw Pile</h1>
                 <div>{$this->cards->count()} remaining cards</div>
             </div>
         HTML);
