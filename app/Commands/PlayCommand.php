@@ -18,6 +18,10 @@ class PlayCommand extends Command
 
     public function handle(): void
     {
+        if(!$this->validateOptions()) {
+            return;
+        }
+
         $players = $this->getPlayers();
 
         if ($players->isEmpty()) {
@@ -225,5 +229,17 @@ class PlayCommand extends Command
         $otherPlayerIndex = array_search($playerChoice, $playerChoices);
 
         return $otherPlayers->get($otherPlayerIndex);
+    }
+
+    private function validateOptions(): bool
+    {
+        $playersCount = $this->option('players-count');
+
+        if ($playersCount && (!is_numeric($playersCount) || $playersCount < 2 || $playersCount > 5)) {
+            $this->error('Invalid players count. Must be between 2 and 5.');
+            return false;
+        }
+
+        return true;
     }
 }
