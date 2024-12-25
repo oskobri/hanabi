@@ -115,8 +115,9 @@ final class GameSession
             $error = true;
         }
 
-        $card = $this->drawPile->pick();
-        $this->getCurrentPlayer()->giveCard($card);
+        if(($card = $this->drawPile->pick())) {
+            $this->getCurrentPlayer()->giveCard($card);
+        }
 
         return $error ?? false;
     }
