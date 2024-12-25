@@ -2,7 +2,7 @@
 
 namespace App;
 
-use App\Enums\HintType;
+use App\ValueObjects\Hint;
 use Illuminate\Support\Collection;
 use function Termwind\render;
 
@@ -32,12 +32,12 @@ final class Player
         return $card;
     }
 
-    public function giveHint(HintType $hintType, string $hintValue): void
+    public function giveHint(Hint $hint): void
     {
-        $knownProperty = 'known' . ucfirst($hintType->value);
+        $knownProperty = 'known' . ucfirst($hint->type->value);
 
         $this->cards
-            ->where("{$hintType->value}.value", $hintValue)
+            ->where("{$hint->type->value}.value", $hint->value)
             ->each(fn($card) => $card->$knownProperty = true);
     }
 
