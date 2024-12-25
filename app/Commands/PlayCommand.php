@@ -2,6 +2,7 @@
 
 namespace App\Commands;
 
+use App\Enums\HintType;
 use App\GameSession;
 use App\Player;
 use Illuminate\Support\Collection;
@@ -13,7 +14,7 @@ class PlayCommand extends Command
 
     protected $description = 'Play a game of hanabi';
 
-    private GameSession $gameSession;
+    protected GameSession $gameSession;
 
     public function handle(): void
     {
@@ -78,32 +79,57 @@ class PlayCommand extends Command
         };
     }
 
-    private function discard(): void
+    protected function discard(): void
     {
+        $currentPlayer = $this->gameSession->getCurrentPlayer();
 
-        $cardIndexToDiscard = $this->chooseCard('What card do you want to discard ?');
+        $cardIndexToDiscard = $this->chooseCard(
+            $currentPlayer,
+            'What card do you want to discard ?'
+        );
 
         $this->gameSession->discard($cardIndexToDiscard);
 
         if (($card = $this->gameSession->drawCard())) {
-            $this->gameSession
-                ->getCurrentPlayer()
-                ->giveCard($card);
+            $currentPlayer->giveCard($card);
         }
     }
 
-    private function play(): void
+    protected function play(): void
     {
-        $cardIndexToDiscard = $this->chooseCard('What card do you want to play ?');
+        $currentPlayer = $this->gameSession->getCurrentPlayer();
 
-        if(!$this->gameSession->play($cardIndexToDiscard)) {
+        $cardIndexToDiscard = $this->chooseCard($currentPlayer, 'What card do you want to play ?');
+
+        if (!$this->gameSession->play($cardIndexToDiscard)) {
             $this->warn('Error! You cannot play, this card');
         }
     }
 
-    private function giveHint()
+    protected function giveHint(): void
     {
+        $numberPrefix = "Number ";
 
+        $otherPlayer = $this->choicePlayerToGiveHint();
+        $otherPlayer->renderCards();
+
+        $choices = collect()
+            ->merge($otherPlayer->cards->pluck('number.value')->transform(fn ($number) => $numberPrefix . $number)->unique())
+            ->merge($otherPlayer->cards->pluck('color.value')->unique())
+            ->values()
+            ->toArray();
+
+        $hintChoice = $this->choice(question: 'What hint do you want to give ?', choices: $choices);
+
+        if (str($hintChoice)->startsWith($numberPrefix)) {
+            $hintType = HintType::Number;
+            $value = str($hintChoice)->replace($numberPrefix, '')->toString();
+        } else {
+            $hintType = HintType::Color;
+            $value = $hintChoice;
+        }
+
+        $otherPlayer->giveHint($hintType, $value);
     }
 
     protected function gameLost(): void
@@ -120,25 +146,34 @@ class PlayCommand extends Command
         }
     }
 
-    private function chooseCard(string $message): int
+    protected function chooseCard(Player $player, string $question, bool $multiple = false): int|array
     {
-        $player = $this->gameSession->getCurrentPlayer();
         $player->renderCards(true);
 
         $choices = [
-            'Card position 1',
-            'Card position 2',
-            'Card position 3',
-            'Card position 4',
-            'Card position 5',
+            'Card 1',
+            'Card 2',
+            'Card 3',
+            'Card 4',
+            'Card 5',
         ];
 
-        $choice = $this->choice($message, $choices);
+        $selectedChoices = $this->choice(question: $question, choices: $choices, multiple: $multiple);
 
-        return array_search($choice, $choices);
+        if (!$multiple) {
+            return array_search($selectedChoices, $choices);
+        }
+
+        $cardIndexes = [];
+
+        foreach ($selectedChoices as $selectedChoice) {
+            $cardIndexes[] = array_search($selectedChoice, $choices);
+        }
+
+        return $cardIndexes;
     }
 
-    private function getPlayers(): Collection
+    protected function getPlayers(): Collection
     {
         $playersCount = $this->option('players-count') ?? $this->choice('How many players ? ', [
             2 => '2',
@@ -161,5 +196,25 @@ class PlayCommand extends Command
         }
 
         return $players;
+    }
+
+    protected function choicePlayerToGiveHint(): Player
+    {
+        $otherPlayers = $this->gameSession->getOtherPlayers();
+
+        if ($otherPlayers->count() === 1) {
+            return $otherPlayers->first();
+        }
+
+        $playerChoices = $otherPlayers->pluck('name')->toArray();
+
+        $playerChoice = $this->choice(
+            'Which player do you want to give a hint for?',
+            $playerChoices
+        );
+
+        $otherPlayerIndex = array_search($playerChoice, $playerChoices);
+
+        return $otherPlayers->get($otherPlayerIndex);
     }
 }

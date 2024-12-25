@@ -46,13 +46,22 @@ final class GameSession
         return $this->players->get($this->currentPlayerIndex);
     }
 
+    /**
+     * @return Collection<int, Player>
+     */
+    public function getOtherPlayers(): Collection
+    {
+        return $this->players->except($this->currentPlayerIndex);
+    }
+
     public function nextPlayer(): void
     {
         if ($this->currentPlayerIndex === ($this->players->count() - 1)) {
             $this->currentPlayerIndex = 0;
         }
-
-        $this->currentPlayerIndex += 1;
+        else {
+            $this->currentPlayerIndex += 1;
+        }
     }
 
     public function renderOtherPlayersCards(): void
