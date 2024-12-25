@@ -14,7 +14,7 @@ class PlayCommand extends Command
 
     protected $description = 'Play a game of hanabi';
 
-    protected GameSession $gameSession;
+    private GameSession $gameSession;
 
     public function handle(): void
     {
@@ -44,7 +44,7 @@ class PlayCommand extends Command
         $this->info('You won !');
     }
 
-    protected function turn(): void
+    private function turn(): void
     {
         $currentPlayer = $this->gameSession->getCurrentPlayer();
 
@@ -52,6 +52,7 @@ class PlayCommand extends Command
         $this->gameSession->discardPile->render();
         $this->gameSession->playedCards->render();
         $this->gameSession->drawPile->renderRemainingCards();
+        $this->gameSession->tokenPile->render();
         $this->gameSession->renderErrors();
 
         $this->info("Your turn, $currentPlayer->name");
@@ -64,13 +65,18 @@ class PlayCommand extends Command
         }
     }
 
-    protected function doAction(): void
+    private function doAction(): void
     {
-        $choice = $this->choice('What action do you want to do ?', [
-            'Give a hint',
-            'Discard',
+        $choices = [
             'Play a card',
-        ]);
+            'Discard'
+        ];
+
+        if(!$this->gameSession->tokenPile->isEmpty()) {
+            $choices[] = 'Give a hint';
+        }
+
+        $choice = $this->choice('What action do you want to do ?', $choices);
 
         match ($choice) {
             'Give a hint' => $this->giveHint(),
@@ -79,7 +85,7 @@ class PlayCommand extends Command
         };
     }
 
-    protected function discard(): void
+    private function discard(): void
     {
         $currentPlayer = $this->gameSession->getCurrentPlayer();
 
@@ -93,9 +99,11 @@ class PlayCommand extends Command
         if (($card = $this->gameSession->drawCard())) {
             $currentPlayer->giveCard($card);
         }
+
+        $this->gameSession->tokenPile->putToken();
     }
 
-    protected function play(): void
+    private function play(): void
     {
         $currentPlayer = $this->gameSession->getCurrentPlayer();
 
@@ -106,7 +114,7 @@ class PlayCommand extends Command
         }
     }
 
-    protected function giveHint(): void
+    private function giveHint(): void
     {
         $numberPrefix = "Number ";
 
@@ -130,9 +138,10 @@ class PlayCommand extends Command
         }
 
         $otherPlayer->giveHint($hintType, $value);
+        $this->gameSession->tokenPile->removeToken();
     }
 
-    protected function gameLost(): void
+    private function gameLost(): void
     {
         $this->info('Game over...');
 
@@ -146,7 +155,7 @@ class PlayCommand extends Command
         }
     }
 
-    protected function chooseCard(Player $player, string $question, bool $multiple = false): int|array
+    private function chooseCard(Player $player, string $question, bool $multiple = false): int|array
     {
         $player->renderCards(true);
 
@@ -173,7 +182,7 @@ class PlayCommand extends Command
         return $cardIndexes;
     }
 
-    protected function getPlayers(): Collection
+    private function getPlayers(): Collection
     {
         $playersCount = $this->option('players-count') ?? $this->choice('How many players ? ', [
             2 => '2',
@@ -198,7 +207,7 @@ class PlayCommand extends Command
         return $players;
     }
 
-    protected function choicePlayerToGiveHint(): Player
+    private function choicePlayerToGiveHint(): Player
     {
         $otherPlayers = $this->gameSession->getOtherPlayers();
 

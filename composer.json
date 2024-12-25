@@ -16,7 +16,7 @@
         }
     ],
     "require": {
-        "php": "^8.2.0",
+        "php": "^8.3.0",
         "illuminate/view": "^11.5",
         "laravel-zero/framework": "^11.0.2",
         "nunomaduro/laravel-console-menu": "^3.5"

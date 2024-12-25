@@ -44,7 +44,7 @@ final class Player
     public function renderCards(bool $hidden = false, bool $displayName = true): void
     {
         render(
-            view('player.hand', [
+            view('player-hand', [
                 'name' => $this->name,
                 'cards' => $this->cards,
                 'hidden' => env('SHOW_HIDDEN_CARDS') ? false : $hidden,

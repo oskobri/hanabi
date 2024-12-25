@@ -2,7 +2,6 @@
 
 namespace App;
 
-use App\Enums\Number;
 use Illuminate\Support\Collection;
 use function Termwind\render;
 
@@ -10,16 +9,12 @@ final class GameSession
 {
     public DrawPile $drawPile;
     public DiscardPile $discardPile;
+    public TokenPile $tokenPile;
     public PlayedCards $playedCards;
     public Collection $players;
 
     public int $currentPlayerIndex = 0;
     public bool $isLastTurn = false;
-
-    /**
-     * Game is over when game is lost or won
-     * @var bool
-     */
     public bool $isOver = false;
 
     /**
@@ -35,6 +30,7 @@ final class GameSession
     {
         $this->drawPile = new DrawPile;
         $this->discardPile = new DiscardPile;
+        $this->tokenPile = new TokenPile;
         $this->playedCards = new PlayedCards;
         $this->players = $players;
 
@@ -58,22 +54,16 @@ final class GameSession
     {
         if ($this->currentPlayerIndex === ($this->players->count() - 1)) {
             $this->currentPlayerIndex = 0;
-        }
-        else {
+        } else {
             $this->currentPlayerIndex += 1;
         }
-    }
-
-    public function renderOtherPlayersCards(): void
-    {
-        $this->players->except($this->currentPlayerIndex)->each(fn (Player $player) => $player->renderCards());
     }
 
     public function addError(): void
     {
         $this->errors++;
 
-        if($this->isGameLost()) {
+        if ($this->isGameLost()) {
             $this->isOver = true;
         }
     }
@@ -119,8 +109,7 @@ final class GameSession
 
         if ($this->cardCanBePlayed($card)) {
             $this->playedCards->add($card);
-        }
-        else {
+        } else {
             $this->discardPile->add($card);
             $this->addError();
             $error = true;
@@ -135,11 +124,18 @@ final class GameSession
     public function renderErrors(): void
     {
         $classError = $this->errors ? 'text-red' : 'text-green';
-        $errorText =  str('error')->plural($this->errors);
+        $errorText = str('error')->plural($this->errors);
 
         render(<<<HTML
             <div class="mb-1 $classError">{$this->errors} {$errorText}</div>
-        HTML);
+        HTML
+        );
+    }
+
+
+    public function renderOtherPlayersCards(): void
+    {
+        $this->players->except($this->currentPlayerIndex)->each(fn (Player $player) => $player->renderCards());
     }
 
     private function cardCanBePlayed(Card $card): bool
